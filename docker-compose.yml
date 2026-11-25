@@ -1,0 +1,27 @@
+services:
+  model-serving-platform:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: model-serving-platform
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: sqlite:////app/data/registry.db
+      ARTIFACT_STORAGE_DIR: /app/data/artifacts
+      MAX_LOADED_MODELS: "10"
+      MAX_QUEUE_DEPTH_PER_DEPLOYMENT: "64"
+      INFERENCE_TIMEOUT_SECONDS: "30"
+      LOG_LEVEL: INFO
+    volumes:
+      - serving_data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  serving_data:

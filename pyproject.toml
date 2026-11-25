@@ -1,0 +1,12 @@
+[project]
+name = "model-serving-platform"
+version = "1.0.0"
+description = "ML Model Serving Platform with versioning, traffic splitting, isolated workers, and observability"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]

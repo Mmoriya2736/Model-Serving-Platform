@@ -2,6 +2,18 @@
 
 A production-oriented ML model serving platform built with **FastAPI**, **SQLAlchemy (SQLite WAL)**, and **process-isolated worker replicas**. It supports versioned model registration, multi-format model loading, schema-validated synchronous/batch/async inference, weighted A/B traffic splitting, canary rollouts with automatic rollback, and latency/error/confidence/drift observability.
 
+## Architecture Overview
+
+```text
+Client ──▶ FastAPI (app/main.py) ──▶ SQLite WAL (Registry, Routing, Logs)
+                 │
+                 ├──▶ RoutingService (Weighted split, Sticky sessions, Canary auto-rollback)
+                 └──▶ ServingManager (LRU pool cache, bounded queue -> 429 backpressure)
+                            │
+                            ├──▶ ReplicaWorker [PID 1] (spawn subprocess + Duplex Pipe)
+                            └──▶ ReplicaWorker [PID 2] (spawn subprocess + Duplex Pipe)
+```
+
 ---
 
 ## 1. How to Run the Project
@@ -60,7 +72,7 @@ The test suite covers all required areas:
 - `tests/test_deployment.py` — Deploy, readiness health checks, replica scaling, corrupted artifact failure isolation, subprocess crash isolation (`os._exit(1)`) & worker respawn
 - `tests/test_inference.py` — Classifier, regressor, custom model inference, batch prediction, async job polling, strict JSON Schema validation, SHA-256 `input_hash` privacy
 - `tests/test_routing.py` — Dark launch, weighted traffic splitting, sticky sessions (`X-Session-ID`), instant rollback, canary rollout + automatic rollback on error-rate breach
-- `tests/test_metrics.py` — Empty metrics, `p50`/`p95`/`p99` latencies, throughput RPS, error rate, per-version breakdown, confidence distribution buckets, input drift detection
+- `tests/test_metrics.py` — Empty metrics, `p50`/`p95`/`p99` latencies, throughput RPS, error rate, per-version breakdown, confidence distribution buckets, streaming input drift detection (running mean & variance)
 - `tests/test_onnx_and_resilience.py` — ONNX end-to-end serving, inference timeout (`504`) + recovery, backpressure queue overflow (`429`)
 - `tests/test_advanced_e2e.py` — End-to-end multi-format lifecycle, 60-request concurrency & backpressure stress, canary auto-rollback, boundary validation, and clean worker process shutdown
 

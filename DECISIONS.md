@@ -44,7 +44,7 @@
 
 **Resource limits & Security Boundary:**
 - Deployments validate `resources.memory` (`^\d+(Mi|Gi)$`) and `resources.cpu` (`0 < cpu <= 16`).
-- On POSIX/Docker hosts, each worker enforces the deployment's `resources.memory` budget by checking actual physical RSS (`resource.getrusage(RUSAGE_SELF).ru_maxrss`) after model load rather than setting `RLIMIT_AS`/`RLIMIT_DATA`, which on Linux 4.7+ blocks `dlopen()` of SciPy/OpenBLAS/ONNXRuntime shared-library `mmap` segments even when physical RAM usage is small. On Windows dev hosts, the POSIX RSS check is cleanly guarded and skipped.
+- On POSIX/Docker hosts, each worker enforces the deployment's `resources.memory` budget by checking actual physical RAM (`ru_maxrss`) after model load instead of OS virtual-memory limits (`RLIMIT_DATA`), which on Linux block shared ML libraries (`OpenBLAS`/`ONNXRuntime`) from loading. On Windows dev hosts, the POSIX check is cleanly guarded and skipped.
 - **Scaling & Backpressure:** Each deployment runs a `ReplicaPool` of `N` worker processes with least-in-flight + round-robin dispatch and a bounded pending request counter (`MAX_QUEUE_DEPTH_PER_DEPLOYMENT`). Excess requests fail fast with `429 Too Many Requests` instead of causing unbounded memory growth.
 - **Pickle / Custom `.py` Trust Boundary:** Deserializing `.pkl` files and executing custom `.py` modules can run arbitrary Python code inside the worker process. In production, this should be restricted to signed artifacts from trusted CI pipelines, gated by `ENABLE_CUSTOM_PYTHON_MODELS`, and isolated further using per-model containers/microVMs (see Section 5).
 
